@@ -1,3 +1,11 @@
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
+![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.4-black?logo=apachekafka)
+![Spark](https://img.shields.io/badge/Apache%20Spark-3.5-orange?logo=apachespark)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?logo=postgresql)
+![Grafana](https://img.shields.io/badge/Grafana-10.2-orange?logo=grafana)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 # Real-Time Market Data Streaming Platform
 
 A production-grade real-time streaming pipeline that processes 5,000+ stock market events per minute using Apache Kafka and Apache Spark Structured Streaming, with live Grafana dashboards for visualization.
