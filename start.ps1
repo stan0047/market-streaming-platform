@@ -1,56 +1,48 @@
-# ── Market Streaming Platform - One-Click Startup ──────────
-Write-Host "Starting Market Streaming Platform..." -ForegroundColor Cyan
+# ── Market Streaming Platform v2 - Startup Guide ──────────────
 
-# Set Hadoop for Spark
-$env:HADOOP_HOME = "C:\hadoop"
-$env:PATH = "$env:PATH;C:\hadoop\bin"
-
-# Activate venv
-.\venv\Scripts\Activate.ps1
-
-# Start Docker containers
-Write-Host "Starting Docker containers..." -ForegroundColor Yellow
-docker-compose up -d
-
-# Wait for containers to be ready
-Write-Host "Waiting for containers to be ready..." -ForegroundColor Yellow
-Start-Sleep -Seconds 25
-
-# Show container status
-docker-compose ps
-
-# Recreate DB table if it doesn't exist
-Write-Host "Ensuring database table exists..." -ForegroundColor Yellow
-docker exec postgres psql -U market_user -d market_db -c "
-CREATE TABLE IF NOT EXISTS stock_metrics (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    price DECIMAL(10,2),
-    previous_close DECIMAL(10,2),
-    change_pct DECIMAL(8,4),
-    volume BIGINT,
-    market_cap BIGINT,
-    event_time TIMESTAMP,
-    processed_at TIMESTAMP DEFAULT NOW(),
-    source VARCHAR(20)
-);
-CREATE INDEX IF NOT EXISTS idx_symbol ON stock_metrics(symbol);
-CREATE INDEX IF NOT EXISTS idx_event_time ON stock_metrics(event_time);
-" 2>$null
-
+Write-Host "=================================================" -ForegroundColor Cyan
+Write-Host " Market Streaming Platform v2" -ForegroundColor Cyan
+Write-Host "=================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "=====================================" -ForegroundColor Green
-Write-Host " Setup complete! Now open 2 more terminals and run:" -ForegroundColor Green
+Write-Host "This project runs on AWS EC2 (v2)." -ForegroundColor Yellow
+Write-Host "Use the commands below to start the platform." -ForegroundColor Yellow
 Write-Host ""
-Write-Host " Terminal 1 - Producer:" -ForegroundColor Cyan
-Write-Host "   .\venv\Scripts\Activate.ps1" -ForegroundColor White
-Write-Host "   python producer/producer.py" -ForegroundColor White
+
+Write-Host "── STEP 1: SSH into EC2 ─────────────────────────" -ForegroundColor Green
+Write-Host "  ssh -i C:\Users\<you>\.ssh\market-key.pem ubuntu@<EC2_PUBLIC_IP>" -ForegroundColor White
 Write-Host ""
-Write-Host " Terminal 2 - Spark Consumer:" -ForegroundColor Cyan
-Write-Host "   .\venv\Scripts\Activate.ps1" -ForegroundColor White
-Write-Host "   `$env:HADOOP_HOME = 'C:\hadoop'" -ForegroundColor White
-Write-Host "   `$env:PATH = `"`$env:PATH;C:\hadoop\bin`"" -ForegroundColor White
-Write-Host "   python consumer/spark_consumer.py" -ForegroundColor White
+
+Write-Host "── STEP 2: Start Docker stack ───────────────────" -ForegroundColor Green
+Write-Host "  cd ~/market-streaming-platform" -ForegroundColor White
+Write-Host "  source venv/bin/activate" -ForegroundColor White
+Write-Host "  docker-compose up -d" -ForegroundColor White
 Write-Host ""
-Write-Host " Grafana: http://localhost:3000 (admin/admin)" -ForegroundColor Cyan
-Write-Host "=====================================" -ForegroundColor Green
+
+Write-Host "── STEP 3: Terminal 1 — Producer ────────────────" -ForegroundColor Green
+Write-Host "  python producer/producer.py" -ForegroundColor White
+Write-Host ""
+
+Write-Host "── STEP 4: Terminal 2 — Spark Consumer ──────────" -ForegroundColor Green
+Write-Host "  python consumer/spark_consumer.py" -ForegroundColor White
+Write-Host ""
+
+Write-Host "── STEP 5: Terminal 3 — Airflow ─────────────────" -ForegroundColor Green
+Write-Host "  export AIRFLOW_HOME=~/market-streaming-platform/airflow" -ForegroundColor White
+Write-Host "  airflow webserver -p 8080 -D" -ForegroundColor White
+Write-Host "  airflow scheduler -D" -ForegroundColor White
+Write-Host ""
+
+Write-Host "── STEP 6: dbt + Data Quality ───────────────────" -ForegroundColor Green
+Write-Host "  dbt run --project-dir dbt/ --profiles-dir dbt/" -ForegroundColor White
+Write-Host "  python great_expectations/dq_suite.py" -ForegroundColor White
+Write-Host ""
+
+Write-Host "── ACCESS POINTS ────────────────────────────────" -ForegroundColor Cyan
+Write-Host "  Grafana:  http://<EC2_IP>:3000  (admin/admin)" -ForegroundColor White
+Write-Host "  Airflow:  http://<EC2_IP>:8080  (admin/admin)" -ForegroundColor White
+Write-Host ""
+
+Write-Host "── SHUTDOWN (saves data) ────────────────────────" -ForegroundColor Red
+Write-Host "  docker-compose down" -ForegroundColor White
+Write-Host "  Then STOP EC2 in AWS Console to avoid charges." -ForegroundColor White
+Write-Host "=================================================" -ForegroundColor Cyan
