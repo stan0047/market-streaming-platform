@@ -14,6 +14,7 @@
 A cloud-native, production-grade real-time streaming pipeline deployed on AWS EC2, processing 5,000+ stock market events per minute across 50+ symbols.
 
 ![Architecture](docs/architecture.png)
+![Dashboard](docs/dashboard.png)
 
 ## What's New in v2
 
