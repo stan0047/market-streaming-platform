@@ -1,155 +1,105 @@
-![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
-![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.4-black?logo=apachekafka)
+![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)
+![Kafka](https://img.shields.io/badge/Apache%20Kafka-7.4.0-black?logo=apachekafka)
 ![Spark](https://img.shields.io/badge/Apache%20Spark-3.5-orange?logo=apachespark)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?logo=postgresql)
+![Airflow](https://img.shields.io/badge/Apache%20Airflow-2.8.1-017CEE?logo=apacheairflow)
+![dbt](https://img.shields.io/badge/dbt-1.7.0-FF694B?logo=dbt)
+![AWS](https://img.shields.io/badge/AWS-EC2%20%2B%20S3-FF9900?logo=amazonaws)
 ![Grafana](https://img.shields.io/badge/Grafana-10.2-orange?logo=grafana)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-# Real-Time Market Data Streaming Platform
+# Real-Time Market Data Streaming Platform — v2
 
-A production-grade real-time streaming pipeline that processes 5,000+ stock market events per minute using Apache Kafka and Apache Spark Structured Streaming, with live Grafana dashboards for visualization.
-
-![Dashboard](docs/dashboard.png)
-
-## Architecture
+A cloud-native, production-grade real-time streaming pipeline deployed on AWS EC2, processing 5,000+ stock market events per minute across 50+ symbols.
 
 ![Architecture](docs/architecture.png)
 
+## What's New in v2
+
+| Feature | v1 | v2 |
+|---|---|---|
+| Deployment | Local Windows | AWS EC2 t3.micro |
+| Symbols | 8 | 50+ (S&P 500) |
+| Storage | PostgreSQL only | PostgreSQL + S3 |
+| Orchestration | None | Apache Airflow (4 DAGs) |
+| Transformation | None | dbt Core (staging + mart) |
+| Data Quality | None | Great Expectations (7 checks) |
+| Cost | $0 local | ~$0 (AWS free tier) |
+
+## Architecture
 ## Tech Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Data Source | Yahoo Finance API (yfinance) |
-| Message Broker | Apache Kafka 3.4 |
-| Stream Processor | Apache Spark Structured Streaming 3.5 |
-| Storage | PostgreSQL 15 |
+| Layer | Technology |
+|---|---|
+| Data Source | Yahoo Finance (yfinance) |
+| Message Broker | Apache Kafka 7.4.0 |
+| Stream Processor | Spark Structured Streaming 3.5 |
+| Storage — Hot | PostgreSQL 15 (Docker) |
+| Storage — Cold | AWS S3 (JSON + Parquet) |
+| Transformation | dbt Core 1.7 |
+| Data Quality | Great Expectations (7 checks) |
+| Orchestration | Apache Airflow 2.8.1 |
 | Visualization | Grafana 10.2 |
-| Infrastructure | Docker Compose |
-| Language | Python 3.12 |
+| Infrastructure | AWS EC2 t3.micro + Docker Compose |
 
-## Key Features
+## Airflow DAGs
 
-- **Real-time ingestion** — 5,000+ stock events per minute across 8 symbols
-- **Fault-tolerant processing** — Spark checkpointing ensures exactly-once delivery
-- **30% latency reduction** — achieved through query optimization and micro-batch tuning
-- **1-minute tumbling windows** — VWAP and price aggregations per symbol
-- **Live dashboards** — Grafana auto-refreshes every 5 seconds
-- **Auto-recovery** — producer retries with exponential backoff on broker failure
+| DAG | Schedule | Purpose |
+|---|---|---|
+| symbol_refresh | Daily | Upload S&P 500 symbols to S3 |
+| dbt_run | Hourly | Refresh staging + mart models |
+| dq_checks | Hourly | Run 7-check GE suite → S3 report |
+| s3_export | Nightly | Export 24h data to S3 processed layer |
 
-## Project Structure
+## dbt Models
 
-```
-market-streaming-platform/
-├── producer/
-│   └── producer.py          # Kafka producer — fetches stock data, publishes events
-├── consumer/
-│   └── spark_consumer.py    # Spark Structured Streaming job — aggregates and writes to PG
-├── config/
-│   └── kafka_config.py      # Shared configuration
-├── grafana/
-│   ├── dashboards/          # Dashboard JSON definitions
-│   └── provisioning/        # Auto-provisioned datasource config
-├── logs/                    # Spark checkpoints
-├── docker-compose.yml       # Full stack: Kafka + Zookeeper + PostgreSQL + Grafana
-├── requirements.txt
-└── start.ps1                # One-command startup script (Windows)
-```
+- **stg_stock_metrics** (view) — cleaned source with direction flag (up/down/flat)
+- **mart_symbol_daily** (table) — daily OHLCV aggregations per symbol
 
-## Quick Start
+## Data Quality Checks (7/7 Passing)
 
-### Prerequisites
-- Python 3.9+
-- Docker Desktop
-- Java 11+
+1. Schema — all required columns present
+2. No null symbols
+3. Price range $1–$100,000
+4. Volume non-negative
+5. Data freshness < 2 hours
+6. Minimum row count >= 10
+7. Symbol coverage >= 40 symbols in mart
 
-### 1. Clone the repository
+## S3 Structure
+## Quick Start (EC2)
+
 ```bash
-git clone https://github.com/YOUR_USERNAME/market-streaming-platform.git
-cd market-streaming-platform
-```
-
-### 2. Create virtual environment
-```bash
-python -m venv venv
-source venv/bin/activate        # Mac/Linux
-venv\Scripts\Activate.ps1       # Windows
-pip install -r requirements.txt
-```
-
-### 3. Start infrastructure
-```bash
+ssh -i market-key.pem ubuntu@<EC2_IP>
+cd ~/market-streaming-platform
+source venv/bin/activate
 docker-compose up -d
-```
 
-### 4. Create PostgreSQL table
-```bash
-docker exec -it postgres psql -U market_user -d market_db -c "
-CREATE TABLE IF NOT EXISTS stock_metrics (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    price DECIMAL(10,2),
-    previous_close DECIMAL(10,2),
-    change_pct DECIMAL(8,4),
-    volume BIGINT,
-    market_cap BIGINT,
-    event_time TIMESTAMP,
-    processed_at TIMESTAMP DEFAULT NOW(),
-    source VARCHAR(20)
-);"
-```
-
-### 5. Start the producer (Terminal 1)
-```bash
+# Terminal 1
 python producer/producer.py
-```
 
-### 6. Start the Spark consumer (Terminal 2)
-```bash
-# Windows only
-$env:HADOOP_HOME = "C:\hadoop"
-$env:PATH = "$env:PATH;C:\hadoop\bin"
-
+# Terminal 2
 python consumer/spark_consumer.py
+
+# Terminal 3 — Airflow
+export AIRFLOW_HOME=~/market-streaming-platform/airflow
+airflow webserver -p 8080 -D && airflow scheduler -D
+
+# Run dbt + DQ
+dbt run --project-dir dbt/ --profiles-dir dbt/
+python great_expectations/dq_suite.py
 ```
 
-### 7. Open Grafana dashboard
-Go to http://localhost:3000 (admin/admin)
-
-## Pipeline Flow
-
-```
-Yahoo Finance API
-      ↓
-  Python Producer (kafka-python)
-      ↓  [JSON events @ 1s intervals]
-  Apache Kafka (topic: market_data)
-      ↓  [consume stream]
-  Spark Structured Streaming
-      ↓  [1-min tumbling window aggregations]
-  PostgreSQL (stock_metrics table)
-      ↓  [SQL queries @ 5s refresh]
-  Grafana Dashboard
-```
-
-## Performance Metrics
+## Performance
 
 | Metric | Value |
-|--------|-------|
+|---|---|
 | Throughput | 5,000+ events/min |
-| End-to-end latency | ~10 seconds |
-| Micro-batch interval | 10 seconds |
-| Dashboard refresh | 5 seconds |
-| Stocks tracked | 8 (AAPL, GOOGL, MSFT, AMZN, TSLA, META, NVDA, JPM) |
-| Fault tolerance | Spark checkpointing + Kafka offset tracking |
-
-## Fault Tolerance Design
-
-- **Kafka offsets** — Spark tracks last consumed offset; resumes exactly where it left off
-- **Spark checkpointing** — State is saved to disk every micro-batch
-- **Producer retries** — 5 retry attempts with 3s delay on broker unavailability
-- **At-least-once delivery** — `acks=all` ensures no message loss on producer side
+| Symbols | 50+ (S&P 500) |
+| Latency | ~10 seconds end-to-end |
+| DQ checks | 7/7 passing |
+| AWS cost | ~$0/month (free tier) |
 
 ## License
-
 MIT

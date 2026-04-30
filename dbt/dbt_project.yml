@@ -1,0 +1,11 @@
+name: 'market_streaming'
+version: '1.0.0'
+config-version: 2
+profile: 'market_streaming'
+model-paths: ["models"]
+models:
+  market_streaming:
+    staging:
+      materialized: view
+    mart:
+      materialized: table

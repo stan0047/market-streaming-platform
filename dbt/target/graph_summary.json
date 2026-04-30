@@ -1,0 +1,1 @@
+{"_invocation_id": "7e31447a-7eb3-45b8-8b5f-78fe3fc9a8c0", "linked": {"0": {"name": "source.market_streaming.public.stock_metrics", "type": "source", "succ": [1]}, "1": {"name": "model.market_streaming.stg_stock_metrics", "type": "model", "succ": [2]}, "2": {"name": "model.market_streaming.mart_symbol_daily", "type": "model"}}}
