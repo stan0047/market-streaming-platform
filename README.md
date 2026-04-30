@@ -14,7 +14,6 @@
 A cloud-native, production-grade real-time streaming pipeline deployed on AWS EC2, processing 5,000+ stock market events per minute across 50+ symbols.
 
 ![Architecture](docs/architecture.png)
-![Dashboard](docs/dashboard.png)
 
 ## What's New in v2
 
@@ -45,6 +44,7 @@ A cloud-native, production-grade real-time streaming pipeline deployed on AWS EC
 | Infrastructure | AWS EC2 t3.micro + Docker Compose |
 
 ## Airflow DAGs
+![DAG](docs/DAG_airflow.png)
 
 | DAG | Schedule | Purpose |
 |---|---|---|
@@ -54,7 +54,7 @@ A cloud-native, production-grade real-time streaming pipeline deployed on AWS EC
 | s3_export | Nightly | Export 24h data to S3 processed layer |
 
 ## dbt Models
-
+![Dashboard](docs/dashboard.png)
 - **stg_stock_metrics** (view) — cleaned source with direction flag (up/down/flat)
 - **mart_symbol_daily** (table) — daily OHLCV aggregations per symbol
 
